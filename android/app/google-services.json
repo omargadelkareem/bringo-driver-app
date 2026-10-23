@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "244956209860",
+    "firebase_url": "https://nezamak-41fe2-default-rtdb.firebaseio.com",
+    "project_id": "nezamak-41fe2",
+    "storage_bucket": "nezamak-41fe2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244956209860:android:c576524e1a065c3d81df91",
+        "android_client_info": {
+          "package_name": "com.example.bringo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmFXnCiW-VtE_pv9ZTuvWzUVFAUDKePRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244956209860:android:f08902a057f1c89381df91",
+        "android_client_info": {
+          "package_name": "com.example.nezamak"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmFXnCiW-VtE_pv9ZTuvWzUVFAUDKePRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
