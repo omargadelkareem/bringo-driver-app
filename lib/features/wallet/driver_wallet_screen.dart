@@ -1,3 +1,4 @@
+import 'package:bringo_driver/features/wallet/driver_wallet_topup_panel.dart';
 import 'package:bringo_driver/core/session/driver_session.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -185,6 +186,8 @@ class DriverWalletScreen extends StatelessWidget {
                       totalDueToCompany,
                     ),
 
+                    SizedBox(height: 20.h),
+                    const DriverWalletTopUpPanel(),
                     SizedBox(height: 26.h),
 
                     Row(
