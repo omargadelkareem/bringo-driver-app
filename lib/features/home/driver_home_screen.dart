@@ -1,4 +1,5 @@
 import 'package:bringo_driver/core/routes/app_routes.dart';
+import 'package:bringo_driver/features/wallet/driver_wallet_topup_panel.dart';
 import 'package:bringo_driver/core/session/driver_session.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   final driverPhone = DriverSession.driverPhone ?? '';
 
   bool accepting = false;
+  bool walletEnabled = false;
+  int walletBalanceCents = 0;
   String? acceptingOrderId;
   bool isAvailable = true;
 
@@ -65,6 +68,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   Future<void> acceptOrder(Map<String, dynamic> order) async {
     final key = order['firebaseKey']?.toString() ?? '';
     if (key.isEmpty || accepting) return;
+    if (!walletEnabled) { _msg('اشحن المحفظة وانتظر موافقة الإدارة'); return; }
 
     try {
       setState(() {
@@ -148,6 +152,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
   }
 
   Future<void> toggleAvailability() async {
+    if (!walletEnabled) { _msg('لازم تشحن المحفظة الأول'); return; }
     final newValue = !isAvailable;
     setState(() => isAvailable = newValue);
 
@@ -199,6 +204,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         backgroundColor: background,
         body: SafeArea(
           child: StreamBuilder<DatabaseEvent>(
+            stream: FirebaseDatabase.instance.ref('driverWallets/$driverId').onValue,
+            builder: (context, walletSnapshot) {
+              final raw = walletSnapshot.data?.snapshot.value;
+              final wallet = raw is Map ? raw : <dynamic,dynamic>{};
+              walletBalanceCents = (wallet['balanceCents'] as num?)?.toInt() ?? 0;
+              walletEnabled = walletSnapshot.hasData && !walletSnapshot.hasError && wallet['activated'] == true && walletBalanceCents > 0;
+              return StreamBuilder<DatabaseEvent>(
             stream: FirebaseDatabase.instance.ref('orders').onValue,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting &&
@@ -271,7 +283,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     _topHeader(),
                     SizedBox(height: 17.h),
 
-                    _availabilityCard(),
+                    if (!walletEnabled) ...[
+                      const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('استقبال الرحلات متوقف حتى شحن المحفظة وموافقة الإدارة'))),
+                      const SizedBox(height: 12),
+                      const DriverWalletTopUpPanel(),
+                    ],
+                    if (walletEnabled) _availabilityCard(),
                     SizedBox(height: 22.h),
 
                     if (activeOrder != null) ...[
@@ -320,7 +337,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                         Expanded(
                           child: _statCard(
                             title: 'متاحة',
-                            value: availableOrders.length.toString(),
+                            value: walletEnabled ? availableOrders.length.toString() : '0',
                             icon: Icons.notifications_active_outlined,
                           ),
                         ),
@@ -375,7 +392,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     ),
                     SizedBox(height: 13.h),
 
-                    if (!isAvailable)
+                    if (!walletEnabled)
+                      _emptyBox(icon: Icons.lock_outline, title: 'الرحلات مقفولة', subtitle: 'ارفع صورة التحويل وانتظر موافقة الإدارة')
+                    else if (!isAvailable)
                       _emptyBox(
                         icon: Icons.pause_circle_outline_rounded,
                         title: 'أنت غير متاح حاليًا',
@@ -413,6 +432,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   ],
                 ),
               );
+            },
+          );
             },
           ),
         ),
