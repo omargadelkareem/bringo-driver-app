@@ -10,7 +10,6 @@ class DriverWalletScreen extends StatelessWidget {
   const DriverWalletScreen({super.key});
 
   static const String companyWalletNumber = '01115057318';
-  static const double companyDeliveryShare = 10;
 
   static const Color teal = Color(0xFF1F5A59);
   static const Color darkTeal = Color(0xFF174746);
@@ -67,19 +66,17 @@ class DriverWalletScreen extends StatelessWidget {
   }
 
   double _driverEarning(Map<String, dynamic> order) {
-    final savedDriverEarning = _num(order['driverEarning']);
-    if (savedDriverEarning > 0) return savedDriverEarning;
-
-    final savedDriverFee = _num(order['driverFee']);
-    if (savedDriverFee > 0) return savedDriverFee;
-
-    final deliveryFee = _num(order['deliveryFee']);
-    if (deliveryFee > 0) {
-      final earning = deliveryFee - companyDeliveryShare;
-      return earning > 0 ? earning : 0;
+    if (order.containsKey('driverDeliveryShare')) {
+      return _num(order['driverDeliveryShare']);
     }
-
-    return 0;
+    if (order.containsKey('driverEarning')) {
+      return _num(order['driverEarning']);
+    }
+    if (order.containsKey('driverFee')) {
+      return _num(order['driverFee']);
+    }
+    final fee = _num(order['deliveryFee']);
+    return ((fee * 2 / 3) * 100).round() / 100;
   }
 
   double _cashCollected(Map<String, dynamic> order) {
