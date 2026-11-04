@@ -114,6 +114,66 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (id.isNotEmpty) ...[
+              StreamBuilder<DatabaseEvent>(
+                stream: FirebaseDatabase.instance.ref('driverWallets/$id').onValue,
+                builder: (context, snapshot) {
+                  final raw = snapshot.data?.snapshot.value;
+                  final wallet = raw is Map ? raw : <dynamic,dynamic>{};
+                  final cents = (wallet['balanceCents'] as num?)?.toInt() ?? 0;
+                  final active = wallet['activated'] == true;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 18),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: dark,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('الرصيد المتاح',style: TextStyle(color:Color(0xFFD6E6E0),fontSize:13)),
+                        const SizedBox(height: 6),
+                        Text('${(cents/100).toStringAsFixed(2)} جنيه',
+                            style: const TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text(active ? 'المحفظة مفعّلة' : 'يلزم شحن 100 جنيه وتأكيد الإدارة لتفعيل المحفظة',
+                          style: const TextStyle(color:Color(0xFFDDFB8A),fontSize:12)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              StreamBuilder<DatabaseEvent>(
+                stream: FirebaseDatabase.instance.ref('driverWalletLedger/$id')
+                    .limitToLast(8).onValue,
+                builder: (context,snapshot) {
+                  final raw = snapshot.data?.snapshot.value;
+                  if (raw is! Map || raw.isEmpty) return const SizedBox.shrink();
+                  final items = raw.values.whereType<Map>().toList()
+                    ..sort((a,b) => (int.tryParse(b['createdAt'].toString()) ?? 0)
+                        .compareTo(int.tryParse(a['createdAt'].toString()) ?? 0));
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('آخر حركات الرصيد',style:TextStyle(fontWeight:FontWeight.bold,fontSize:15,color:dark)),
+                      ...items.map((entry) {
+                        final amount = (entry['amountCents'] as num?)?.toInt() ?? 0;
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(amount >= 0 ? Icons.south_west : Icons.north_east,
+                            color:amount >= 0 ? green : Colors.deepOrange),
+                          title: Text(entry['type']=='topup'?'شحن معتمد':'عمولة توصيل'),
+                          trailing: Text('${amount>=0?'+':''}${(amount/100).toStringAsFixed(2)} ج',
+                            style:TextStyle(fontWeight:FontWeight.bold,color:amount>=0?green:Colors.deepOrange)),
+                        );
+                      }),
+                      const Divider(),
+                    ],
+                  );
+                },
+              ),
+            ],
             const Text('شحن رصيد المحفظة',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: dark)),
             const SizedBox(height: 8),
