@@ -38,7 +38,7 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
 
     if (id == null || id.isEmpty) return;
     if (value == null || value < 100 || value > 10000 ||
-        (value * 100).roundToDouble() != value * 100) {
+        ((value * 100) - (value * 100).round()).abs() > 0.001) {
       message('أقل مبلغ للشحن 100 جنيه، وأقصى مبلغ 10000 جنيه.');
       return;
     }
