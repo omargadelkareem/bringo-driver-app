@@ -2,6 +2,8 @@ import 'package:bringo_driver/core/session/driver_session.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 /// Manual top-up requests never credit a wallet directly.
 /// The pending request must be verified and settled by a trusted backend.
@@ -21,6 +23,20 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
   final senderPhone = TextEditingController();
   final reference = TextEditingController();
   bool submitting = false;
+  String? receiptImage;
+  bool picking = false;
+
+  Future<void> pickReceipt() async {
+    setState(() => picking = true);
+    try {
+      final image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 45, maxWidth: 900);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (bytes.length > 350000) { message('الصورة كبيرة، اختار صورة أصغر'); return; }
+      if (mounted) setState(() => receiptImage = base64Encode(bytes));
+    } catch (_) { message('تعذر اختيار صورة التحويل'); }
+    finally { if (mounted) setState(() => picking = false); }
+  }
 
   @override
   void dispose() {
@@ -51,6 +67,7 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
       return;
     }
 
+    if (receiptImage == null) { message('ارفع صورة إيصال التحويل الأول'); return; }
     setState(() => submitting = true);
     try {
       final node = FirebaseDatabase.instance.ref('walletTopUpRequests').push();
@@ -62,6 +79,7 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
         'amountCents': (value * 100).round(),
         'senderPhone': phone,
         'transferReference': refNumber,
+        'receiptImageBase64': receiptImage,
         'status': 'pending',
         'createdAt': ServerValue.timestamp,
       });
@@ -69,6 +87,7 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
       amount.text = '100';
       senderPhone.clear();
       reference.clear();
+      receiptImage = null;
       message('تم إرسال طلب الشحن للمراجعة. الرصيد لن يزيد إلا بعد تأكيد الإدارة.');
     } catch (_) {
       if (mounted) message('تعذر إرسال الطلب. حاول مرة أخرى.');
@@ -191,6 +210,12 @@ class _DriverWalletTopUpPanelState extends State<DriverWalletTopUpPanel> {
             field('مبلغ الشحن بالجنيه (100 فأكثر)', amount, inputType: const TextInputType.numberWithOptions(decimal: true)),
             field('رقم المحفظة المرسِل منها', senderPhone, inputType: TextInputType.phone),
             field('رقم العملية / مرجع التحويل', reference),
+            OutlinedButton.icon(
+              onPressed: picking || submitting ? null : pickReceipt,
+              icon: Icon(receiptImage == null ? Icons.add_photo_alternate_outlined : Icons.check_circle_outline),
+              label: Text(receiptImage == null ? 'إرفاق صورة التحويل' : 'تم إرفاق صورة التحويل'),
+            ),
+            const SizedBox(height: 12),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: green),
               onPressed: submitting ? null : submit,
