@@ -404,8 +404,8 @@ class DriverWalletScreen extends StatelessWidget {
     required String value,
   }) {
     return Container(
-      height: 92.h,
-      padding: EdgeInsets.all(13.w),
+      constraints: BoxConstraints(minHeight: 104.h),
+      padding: EdgeInsets.symmetric(horizontal: 13.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(19.r),
@@ -415,9 +415,11 @@ class DriverWalletScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Icon(icon, color: teal, size: 19.sp),
-          const Spacer(),
+          SizedBox(height: 7.h),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.cairo(
               color: darkTeal,
               fontSize: 16.sp,
@@ -426,7 +428,8 @@ class DriverWalletScreen extends StatelessWidget {
           ),
           Text(
             title,
-            maxLines: 1,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.cairo(
               color: textGrey,
               fontSize: 9.sp,
