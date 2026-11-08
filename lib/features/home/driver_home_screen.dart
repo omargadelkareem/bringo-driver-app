@@ -291,6 +291,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   ),
                   children: [
                     _topHeader(),
+                    SizedBox(height: 12.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14.r), border: Border.all(color: border)),
+                      child: Row(children: [
+                        Icon(Icons.account_balance_wallet_rounded, color: teal),
+                        SizedBox(width: 8.w),
+                        Text('${balance.toStringAsFixed(2)} جنيه', style: GoogleFonts.cairo(fontSize: 17.sp, fontWeight: FontWeight.w900, color: darkTeal)),
+                        const Spacer(),
+                        Text('رصيد المحفظة', style: GoogleFonts.cairo(fontSize: 12.sp, fontWeight: FontWeight.w700, color: textGrey)),
+                      ]),
+                    ),
                     SizedBox(height: 17.h),
 
                     if (!canReceive)
