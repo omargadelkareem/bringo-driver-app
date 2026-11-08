@@ -133,7 +133,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> {
       if (!mounted) return;
 
       if (profileCompleted) {
-        context.go(AppRoutes.home);
+        context.go(AppRoutes.mainLayout);
       } else {
         context.go(AppRoutes.profileSetup);
       }
