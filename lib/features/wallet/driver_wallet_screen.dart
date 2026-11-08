@@ -170,6 +170,28 @@ class DriverWalletScreen extends StatelessWidget {
                       due: totalDueToCompany,
                     ),
                     SizedBox(height: 13.h),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(17.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18.r),
+                        border: Border.all(color: border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('إجمالي أرباحك من التوصيل',
+                            style: GoogleFonts.cairo(color: textGrey, fontSize: 12.sp, fontWeight: FontWeight.w700)),
+                          SizedBox(height: 5.h),
+                          Text('${totalDriverEarnings.toStringAsFixed(2)} جنيه',
+                            style: GoogleFonts.cairo(color: darkTeal, fontSize: 25.sp, fontWeight: FontWeight.w900)),
+                          Text('نصيبك: ثلثا رسوم التوصيل للطلبات المكتملة',
+                            style: GoogleFonts.cairo(color: textGrey, fontSize: 10.sp)),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 13.h),
 
                     _simpleSummary(
                       collected: totalDueToCompany,
