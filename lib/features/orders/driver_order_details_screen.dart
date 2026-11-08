@@ -227,7 +227,11 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (orderKey.isEmpty) return const Scaffold(body: Center(child: Text('تعذر العثور على الطلب'));
+    if (orderKey.isEmpty) {
+      return const Scaffold(
+        body: Center(child: Text('تعذر العثور على الطلب')),
+      );
+    }
     return StreamBuilder<DatabaseEvent>(
       stream: FirebaseDatabase.instance.ref('orders/$orderKey').onValue,
       builder: (context, snapshot) {
