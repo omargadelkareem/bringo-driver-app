@@ -1,5 +1,4 @@
 import 'package:bringo_driver/core/routes/app_routes.dart';
-import 'package:bringo_driver/features/home/driver_home_screen.dart';
 import 'package:bringo_driver/features/login/driver_login_screen.dart';
 import 'package:bringo_driver/features/main/driver_main_layout.dart';
 import 'package:bringo_driver/features/orders/driver_order_details_screen.dart';
@@ -21,7 +20,7 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const DriverHomeScreen(),
+        redirect: (context, state) => AppRoutes.mainLayout,
       ),
       GoRoute(
         path: AppRoutes.orderDetails,
