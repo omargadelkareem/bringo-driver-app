@@ -167,8 +167,57 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
     }
   }
 
+  Future<void> _acceptFromDetails(Map<String, dynamic> order) async {
+    final driverId = DriverSession.driverId;
+    if (driverId == null || driverId.isEmpty || orderKey.isEmpty || loading) return;
+    setState(() => loading = true);
+    try {
+      final driverSnapshot = await FirebaseDatabase.instance.ref('drivers/$driverId').get();
+      if (driverSnapshot.value is! Map) throw StateError('driver');
+      final driver = Map<dynamic, dynamic>.from(driverSnapshot.value as Map);
+      final balance = _num(driver['walletBalance']);
+      final commission = _num(order['deliveryFee']) / 3;
+      if (driver['isActive'] == false || driver['receivingOrdersEnabled'] != true ||
+          balance + 0.001 < commission) {
+        _message('الحساب غير مفعل أو رصيد المحفظة لا يغطي عمولة الطلب');
+        return;
+      }
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final result = await FirebaseDatabase.instance.ref('orders/$orderKey').runTransaction((value) {
+        if (value is! Map) return Transaction.abort();
+        final current = Map<String, dynamic>.from(value);
+        final assigned = (current['driverId'] ?? current['driverKey'] ?? '').toString();
+        final status = (current['status'] ?? current['orderStatus'] ?? '').toString().toLowerCase();
+        const available = {'pending', 'new', 'confirmed', 'accepted', 'approved',
+          'preparing', 'ready', 'ready_for_pickup', 'readyforpickup'};
+        if (assigned.isNotEmpty || !available.contains(status)) return Transaction.abort();
+        current['driverId'] = driverId;
+        current['driverKey'] = driverId;
+        current['driverName'] = DriverSession.driverName ?? '';
+        current['driverPhone'] = DriverSession.driverPhone ?? '';
+        current['status'] = 'assigned';
+        current['orderStatus'] = 'assigned';
+        current['acceptedAt'] = now;
+        current['assignedAt'] = now;
+        current['updatedAt'] = now;
+        return Transaction.success(current);
+      });
+      if (mounted) _message(result.committed ? 'تم قبول الطلب، ابدأ المشوار' : 'الطلب لم يعد متاحًا');
+    } catch (_) {
+      if (mounted) _message('تعذر قبول الطلب، حاول مرة أخرى');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   Future<void> updateStatus(String status) async {
     if (orderKey.isEmpty || loading) return;
+
+    final ownerSnapshot = await FirebaseDatabase.instance.ref('orders/$orderKey/driverId').get();
+    if (ownerSnapshot.value?.toString() != DriverSession.driverId) {
+      if (mounted) _message('لازم تقبل الطلب الأول قبل تحديث حالته');
+      return;
+    }
 
     try {
       setState(() => loading = true);
@@ -364,7 +413,18 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
                       ),
 
                     SizedBox(height: 24.h),
-                    _statusAction(status),
+                    if ((order['driverId'] ?? order['driverKey'] ?? '').toString().isEmpty)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: loading ? null : () => _acceptFromDetails(order),
+                          child: Text('قبول الطلب', style: GoogleFonts.cairo(fontWeight: FontWeight.w800)),
+                        ),
+                      )
+                    else if ((order['driverId'] ?? order['driverKey']).toString() == DriverSession.driverId)
+                      _statusAction(status)
+                    else
+                      Text('تم قبول الطلب بواسطة طيار آخر', style: GoogleFonts.cairo(color: textGrey)),
                   ],
                 ),
               ),
