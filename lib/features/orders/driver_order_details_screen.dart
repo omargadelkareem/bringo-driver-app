@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:bringo_driver/core/session/driver_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -137,6 +138,35 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
     );
   }
 
+  Future<void> _deductCommissionOnce() async {
+    final driverId = DriverSession.driverId;
+    if (driverId == null || driverId.isEmpty || orderKey.isEmpty) return;
+    final snapshot = await FirebaseDatabase.instance.ref('orders/$orderKey').get();
+    if (snapshot.value is! Map) return;
+    final order = Map<dynamic, dynamic>.from(snapshot.value as Map);
+    if (order['driverId']?.toString() != driverId) return;
+    final fee = _num(order['deliveryFee']);
+    if (fee <= 0) return;
+    final commission = (fee / 3 * 100).round() / 100;
+    final driverRef = FirebaseDatabase.instance.ref('drivers/$driverId');
+    final result = await driverRef.runTransaction((value) {
+      if (value is! Map) return Transaction.abort();
+      final driver = Map<String, dynamic>.from(value);
+      final deductions = driver['commissionDeductions'] is Map
+          ? Map<String, dynamic>.from(driver['commissionDeductions'] as Map)
+          : <String, dynamic>{};
+      if (deductions.containsKey(orderKey)) return Transaction.abort();
+      final balance = _num(driver['walletBalance']);
+      driver['walletBalance'] = ((balance - commission) * 100).round() / 100;
+      deductions[orderKey] = commission;
+      driver['commissionDeductions'] = deductions;
+      return Transaction.success(driver);
+    });
+    if (result.committed && mounted) {
+      _message('تم خصم ${commission.toStringAsFixed(2)} جنيه عمولة Bringo من المحفظة');
+    }
+  }
+
   Future<void> updateStatus(String status) async {
     if (orderKey.isEmpty || loading) return;
 
@@ -159,8 +189,15 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
           .ref('orders/$orderKey')
           .update(updates);
 
+      if (status == 'completed') {
+        try {
+          await _deductCommissionOnce();
+        } catch (_) {
+          if (mounted) _message('تم التسليم، لكن تعذر خصم العمولة. يرجى مراجعة الإدارة.');
+        }
+      }
       if (!mounted) return;
-      _message('تم تحديث حالة الطلب');
+      if (status != 'completed') _message('تم تحديث حالة الطلب');
     } catch (_) {
       if (!mounted) return;
       _message('حدث خطأ أثناء تحديث الطلب');
