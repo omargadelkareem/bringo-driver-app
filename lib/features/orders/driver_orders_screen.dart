@@ -78,13 +78,17 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
         .trim();
   }
 
-  Future<bool> _canReceiveOrders() async {
+  double _orderDeliveryFee(Map<String, dynamic> order) =>
+      double.tryParse('${order['deliveryFee'] ?? 0}') ?? 0;
+
+  Future<bool> _canReceiveOrders(Map<String, dynamic> order) async {
     final snapshot = await FirebaseDatabase.instance.ref('drivers/$driverId').get();
     if (!snapshot.exists || snapshot.value is! Map) return false;
     final driver = Map<dynamic, dynamic>.from(snapshot.value as Map);
     final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
     return driver['isActive'] != false &&
-        driver['receivingOrdersEnabled'] == true && balance >= 100;
+        driver['receivingOrdersEnabled'] == true &&
+        balance + 0.001 >= (_orderDeliveryFee(order) / 3);
   }
 
   Future<void> acceptOrder(Map<String, dynamic> order) async {
@@ -94,8 +98,8 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
     try {
       setState(() => loadingOrderId = key);
 
-      if (!await _canReceiveOrders()) {
-        _msg('استقبال الطلبات متوقف. اشحن المحفظة بحد أدنى 100 جنيه وانتظر تفعيل الإدارة.');
+      if (!await _canReceiveOrders(order)) {
+        _msg('لا يمكن قبول الطلب: الحساب غير مفعل أو الرصيد لا يغطي عمولة Bringo لهذا الطلب.');
         return;
       }
       final orderRef = FirebaseDatabase.instance.ref('orders/$key');
