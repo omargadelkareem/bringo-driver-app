@@ -143,7 +143,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         'updatedAt': now,
       });
 
-      _msg('تم قبول الطلب.. جاهز للمشوار 🚀');
+      if (!mounted) return;
+      context.push(AppRoutes.orderDetails, extra: {...freshOrder, 'firebaseKey': key, 'driverId': driverId, 'status': 'assigned', 'orderStatus': 'assigned'});
     } catch (_) {
       _msg('حدث خطأ أثناء قبول الطلب');
     } finally {
