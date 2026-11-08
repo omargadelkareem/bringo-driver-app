@@ -292,7 +292,39 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     _topHeader(),
                     SizedBox(height: 17.h),
 
-                    _availabilityCard(),
+                    if (!canReceive)
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(18.w),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1EE),
+                          border: Border.all(color: const Color(0xFFF3B4A8)),
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.block_rounded, color: Color(0xFFB43C2D), size: 30),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('لا يمكنك استقبال الطلبات حاليًا',
+                                    style: GoogleFonts.cairo(fontSize: 15.sp, fontWeight: FontWeight.w900, color: const Color(0xFF9C3024))),
+                                  Text(driverSnapshot.hasError
+                                    ? 'تعذر التحقق من حالة الحساب. حاول مرة أخرى.'
+                                    : driver['receivingOrdersEnabled'] != true || driver['isActive'] == false
+                                      ? 'تم إيقاف استقبال الطلبات من الإدارة.'
+                                      : 'رصيد المحفظة أقل من الحد الأدنى 100 جنيه.',
+                                    style: GoogleFonts.cairo(fontSize: 11.sp, color: const Color(0xFF8A4037))),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      _availabilityCard(),
                     SizedBox(height: 22.h),
 
                     if (activeOrder != null) ...[
@@ -396,7 +428,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     ),
                     SizedBox(height: 13.h),
 
-                    if (!isAvailable)
+                    if (!canReceive)
+                      _emptyBox(
+                        icon: Icons.block_rounded,
+                        title: 'استقبال الطلبات متوقف',
+                        subtitle: 'لن تظهر طلبات جديدة حتى يتم تفعيل الاستقبال وتوفر الرصيد المطلوب',
+                      )
+                    else if (!isAvailable)
                       _emptyBox(
                         icon: Icons.pause_circle_outline_rounded,
                         title: 'أنت غير متاح حاليًا',
