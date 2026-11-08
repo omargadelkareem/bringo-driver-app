@@ -9,7 +9,7 @@ class DriverWalletScreen extends StatelessWidget {
   const DriverWalletScreen({super.key});
 
   static const String companyWalletNumber = '01115057318';
-  static const double companyDeliveryShare = 10;
+  static const double companyDeliveryShare = 1 / 3;
 
   static const Color teal = Color(0xFF1F5A59);
   static const Color darkTeal = Color(0xFF174746);
@@ -74,7 +74,7 @@ class DriverWalletScreen extends StatelessWidget {
 
     final deliveryFee = _num(order['deliveryFee']);
     if (deliveryFee > 0) {
-      final earning = deliveryFee - companyDeliveryShare;
+      final earning = deliveryFee * (1 - companyDeliveryShare);
       return earning > 0 ? earning : 0;
     }
 
@@ -96,11 +96,7 @@ class DriverWalletScreen extends StatelessWidget {
   }
 
   double _dueToCompany(Map<String, dynamic> order) {
-    final savedDue = _num(order['amountDueToCompany']);
-    if (savedDue > 0) return savedDue;
-
-    final due = _cashCollected(order) - _driverEarning(order);
-    return due > 0 ? due : 0;
+    return _num(order['deliveryFee']) * companyDeliveryShare;
   }
 
   @override
@@ -175,8 +171,8 @@ class DriverWalletScreen extends StatelessWidget {
 
                     SizedBox(height: 24.h),
                     _sectionTitle(
-                      'التوريد للشركة',
-                      'المبلغ اللي معاك وخصمنا منه أرباحك تلقائيًا',
+                      'عمولة Bringo',
+                      'ثلث رسوم التوصيل فقط، بدون قيمة البضاعة',
                     ),
                     SizedBox(height: 10.h),
 
@@ -361,8 +357,8 @@ class DriverWalletScreen extends StatelessWidget {
                 const Spacer(),
                 Text(
                   due <= 0
-                      ? 'مفيش مبلغ مطلوب توريده'
-                      : 'مطلوب توريده للشركة',
+                      ? 'لا توجد عمولات'
+                      : 'إجمالي عمولة Bringo',
                   style: GoogleFonts.cairo(
                     color: Colors.white,
                     fontSize: 10.5.sp,
@@ -386,7 +382,7 @@ class DriverWalletScreen extends StatelessWidget {
         Expanded(
           child: _summaryItem(
             icon: Icons.payments_outlined,
-            title: 'استلمت من العملاء',
+            title: 'إجمالي التحصيل (للمراجعة)',
             value: '${collected.toStringAsFixed(0)} ج',
           ),
         ),
@@ -507,7 +503,7 @@ class DriverWalletScreen extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                due > 0 ? 'حوّل المبلغ للشركة' : 'حسابك متوازن',
+                due > 0 ? 'عمولة التوصيل' : 'حسابك متوازن',
                 style: GoogleFonts.cairo(
                   color: textDark,
                   fontSize: 13.sp,
@@ -527,8 +523,8 @@ class DriverWalletScreen extends StatelessWidget {
           SizedBox(height: 12.h),
           Text(
             due > 0
-                ? 'ده صافي المبلغ المطلوب بعد خصم أرباحك من التوصيل.'
-                : 'لا يوجد مبلغ مطلوب منك توريده حاليًا.',
+                ? 'هذه عمولة التوصيل فقط، ولا تشمل قيمة مشتريات العميل.'
+                : 'لا توجد عمولات توصيل حالياً.',
             textAlign: TextAlign.right,
             style: GoogleFonts.cairo(
               color: textGrey,
