@@ -78,6 +78,15 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
         .trim();
   }
 
+  Future<bool> _canReceiveOrders() async {
+    final snapshot = await FirebaseDatabase.instance.ref('drivers/$driverId').get();
+    if (!snapshot.exists || snapshot.value is! Map) return false;
+    final driver = Map<dynamic, dynamic>.from(snapshot.value as Map);
+    final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
+    return driver['isActive'] != false &&
+        driver['receivingOrdersEnabled'] == true && balance >= 100;
+  }
+
   Future<void> acceptOrder(Map<String, dynamic> order) async {
     final key = order['firebaseKey']?.toString() ?? '';
     if (key.isEmpty || loadingOrderId != null) return;
@@ -85,6 +94,10 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
     try {
       setState(() => loadingOrderId = key);
 
+      if (!await _canReceiveOrders()) {
+        _msg('استقبال الطلبات متوقف. اشحن المحفظة بحد أدنى 100 جنيه وانتظر تفعيل الإدارة.');
+        return;
+      }
       final orderRef = FirebaseDatabase.instance.ref('orders/$key');
       final snapshot = await orderRef.get();
 
