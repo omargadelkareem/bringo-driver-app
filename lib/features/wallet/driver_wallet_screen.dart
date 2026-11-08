@@ -109,6 +109,12 @@ class DriverWalletScreen extends StatelessWidget {
         backgroundColor: background,
         body: SafeArea(
           child: StreamBuilder<DatabaseEvent>(
+            stream: FirebaseDatabase.instance.ref('drivers/$driverId').onValue,
+            builder: (context, driverSnapshot) {
+              final driverData = driverSnapshot.data?.snapshot.value;
+              final driver = driverData is Map ? Map<dynamic, dynamic>.from(driverData) : <dynamic, dynamic>{};
+              final walletBalance = _num(driver['walletBalance']);
+              return StreamBuilder<DatabaseEvent>(
             stream: FirebaseDatabase.instance.ref('orders').onValue,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting &&
@@ -159,6 +165,7 @@ class DriverWalletScreen extends StatelessWidget {
                     SizedBox(height: 20.h),
 
                     _balanceHero(
+                      balance: walletBalance,
                       earnings: totalDriverEarnings,
                       due: totalDueToCompany,
                     ),
@@ -229,6 +236,8 @@ class DriverWalletScreen extends StatelessWidget {
                 ),
               );
             },
+          );
+            },
           ),
         ),
       ),
@@ -282,6 +291,7 @@ class DriverWalletScreen extends StatelessWidget {
   }
 
   Widget _balanceHero({
+    required double balance,
     required double earnings,
     required double due,
   }) {
@@ -314,7 +324,7 @@ class DriverWalletScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'أرباحك من التوصيل',
+                    'رصيد المحفظة الحالي',
                     style: GoogleFonts.cairo(
                       color: Colors.white.withOpacity(.68),
                       fontSize: 11.sp,
@@ -323,7 +333,7 @@ class DriverWalletScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 3.h),
                   Text(
-                    '${earnings.toStringAsFixed(0)} جنيه',
+                    '${balance.toStringAsFixed(2)} جنيه',
                     style: GoogleFonts.cairo(
                       color: Colors.white,
                       fontSize: 29.sp,
