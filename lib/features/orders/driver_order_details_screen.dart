@@ -161,7 +161,6 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
 
       if (!mounted) return;
       _message('تم تحديث حالة الطلب');
-      Navigator.pop(context);
     } catch (_) {
       if (!mounted) return;
       _message('حدث خطأ أثناء تحديث الطلب');
@@ -191,7 +190,20 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final order = widget.order;
+    if (orderKey.isEmpty) return const Scaffold(body: Center(child: Text('تعذر العثور على الطلب'));
+    return StreamBuilder<DatabaseEvent>(
+      stream: FirebaseDatabase.instance.ref('orders/$orderKey').onValue,
+      builder: (context, snapshot) {
+        final value = snapshot.data?.snapshot.value;
+        final order = value is Map
+            ? {...widget.order, ...Map<String, dynamic>.from(value)}
+            : widget.order;
+        return _buildOrderDetails(context, order);
+      },
+    );
+  }
+
+  Widget _buildOrderDetails(BuildContext context, Map<String, dynamic> order) {
     final customerName =
         _firstText([order['customerName'], order['name']]);
     final phone = _firstText([order['customerPhone'], order['phone']]);
