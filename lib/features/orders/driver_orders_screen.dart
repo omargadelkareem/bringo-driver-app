@@ -268,6 +268,13 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
               SizedBox(height: 8.h),
               Expanded(
                 child: StreamBuilder<DatabaseEvent>(
+                  stream: FirebaseDatabase.instance.ref('drivers/$driverId').onValue,
+                  builder: (context, driverSnapshot) {
+                    final data = driverSnapshot.data?.snapshot.value;
+                    final driver = data is Map ? Map<dynamic, dynamic>.from(data) : <dynamic, dynamic>{};
+                    final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
+                    final enabled = driverSnapshot.hasData && driver['isActive'] != false && driver['receivingOrdersEnabled'] == true;
+                    return StreamBuilder<DatabaseEvent>(
                   stream: FirebaseDatabase.instance.ref('orders').onValue,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState ==
@@ -286,7 +293,7 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
 
                     final orders = parseOrders(snapshot.data?.snapshot.value);
                     final available =
-                        orders.where(_isAvailableOrder).toList();
+                        orders.where((order) => enabled && _isAvailableOrder(order) && balance + 0.001 >= _orderDeliveryFee(order) / 3).toList();
                     final mine =
                         orders.where(_isMyActiveOrder).toList();
                     final completed =
