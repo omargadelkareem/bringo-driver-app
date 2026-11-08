@@ -74,7 +74,7 @@ class OrderNotificationListener {
     final driver = Map<dynamic, dynamic>.from(driverSnapshot.value as Map);
     final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
     final canReceive = driver['isActive'] != false &&
-        driver['receivingOrdersEnabled'] == true && balance >= 100;
+        driver['receivingOrdersEnabled'] == true;
     if (!canReceive) {
       // Do not notify about orders that appeared while reception was disabled.
       if (value is Map) {
@@ -105,7 +105,8 @@ class OrderNotificationListener {
 
       final order = Map<String, dynamic>.from(entry.value as Map);
 
-      if (!_isAvailableForDriver(order)) {
+      final fee = double.tryParse('${order['deliveryFee'] ?? 0}') ?? 0;
+      if (!_isAvailableForDriver(order) || balance + 0.001 < fee / 3) {
         continue;
       }
 
