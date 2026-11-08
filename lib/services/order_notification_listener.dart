@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:bringo_driver/core/session/driver_session.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'notification_service.dart';
@@ -64,6 +65,29 @@ class OrderNotificationListener {
 
   Future<void> _handleOrders(DatabaseEvent event) async {
     final value = event.snapshot.value;
+
+    // Keep the driver signed in, but suppress new-order alerts when disabled.
+    final driverId = DriverSession.driverId;
+    if (driverId == null || driverId.isEmpty) return;
+    final driverSnapshot = await FirebaseDatabase.instance.ref('drivers/$driverId').get();
+    if (!driverSnapshot.exists || driverSnapshot.value is! Map) return;
+    final driver = Map<dynamic, dynamic>.from(driverSnapshot.value as Map);
+    final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
+    final canReceive = driver['isActive'] != false &&
+        driver['receivingOrdersEnabled'] == true && balance >= 100;
+    if (!canReceive) {
+      // Do not notify about orders that appeared while reception was disabled.
+      if (value is Map) {
+        for (final entry in value.entries) {
+          if (entry.value is Map &&
+              _isAvailableForDriver(Map<String, dynamic>.from(entry.value as Map))) {
+            _knownAvailableOrders.add(entry.key.toString());
+          }
+        }
+      }
+      _firstSnapshot = false;
+      return;
+    }
 
     if (value == null || value is! Map) {
       _firstSnapshot = false;
