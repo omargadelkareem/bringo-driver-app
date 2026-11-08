@@ -326,6 +326,8 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
                       ],
                     );
                   },
+                );
+                  },
                 ),
               ),
             ],
