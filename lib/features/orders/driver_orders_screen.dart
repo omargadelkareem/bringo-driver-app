@@ -135,8 +135,8 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
         'updatedAt': now,
       });
 
-      _msg('تم قبول الطلب');
-      tabController.animateTo(1);
+      if (!mounted) return;
+      context.push(AppRoutes.orderDetails, extra: {...fresh, 'firebaseKey': key, 'driverId': driverId, 'status': 'assigned', 'orderStatus': 'assigned'});
     } catch (_) {
       _msg('حدث خطأ أثناء قبول الطلب');
     } finally {
