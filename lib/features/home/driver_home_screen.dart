@@ -212,6 +212,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         backgroundColor: background,
         body: SafeArea(
           child: StreamBuilder<DatabaseEvent>(
+            stream: FirebaseDatabase.instance.ref('drivers/$driverId').onValue,
+            builder: (context, driverSnapshot) {
+              final driverData = driverSnapshot.data?.snapshot.value;
+              final driver = driverData is Map ? Map<dynamic, dynamic>.from(driverData) : <dynamic, dynamic>{};
+              final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
+              final canReceive = driverSnapshot.hasData && driver['isActive'] != false &&
+                  driver['receivingOrdersEnabled'] == true && balance >= 100;
+              return StreamBuilder<DatabaseEvent>(
             stream: FirebaseDatabase.instance.ref('orders').onValue,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting &&
@@ -225,7 +233,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
               final orders = _parseOrders(snapshot.data?.snapshot.value);
 
-              final availableOrders = orders.where((order) {
+              final availableOrders = !canReceive ? <Map<String, dynamic>>[] : orders.where((order) {
                 final status = _firstText([
                   order['status'],
                   order['orderStatus'],
@@ -426,6 +434,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                   ],
                 ),
               );
+            },
+          );
             },
           ),
         ),
