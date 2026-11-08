@@ -62,6 +62,15 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     return '';
   }
 
+  Future<bool> _canReceiveOrders() async {
+    final snapshot = await FirebaseDatabase.instance.ref('drivers/$driverId').get();
+    if (!snapshot.exists || snapshot.value is! Map) return false;
+    final driver = Map<dynamic, dynamic>.from(snapshot.value as Map);
+    final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
+    return driver['isActive'] != false &&
+        driver['receivingOrdersEnabled'] == true && balance >= 100;
+  }
+
   Future<void> acceptOrder(Map<String, dynamic> order) async {
     final key = order['firebaseKey']?.toString() ?? '';
     if (key.isEmpty || accepting) return;
@@ -72,6 +81,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         acceptingOrderId = key;
       });
 
+      if (!await _canReceiveOrders()) {
+        _msg('لا يمكنك استقبال الطلبات إلا بعد شحن المحفظة وتفعيل الحساب من الإدارة (الحد الأدنى 100 جنيه)');
+        return;
+      }
       final orderRef = FirebaseDatabase.instance.ref('orders/$key');
       final freshSnapshot = await orderRef.get();
 
