@@ -165,7 +165,7 @@ class DriverWalletScreen extends StatelessWidget {
                     SizedBox(height: 13.h),
 
                     _simpleSummary(
-                      collected: totalCollected,
+                      collected: totalDueToCompany,
                       completedCount: completedOrders.length,
                     ),
 
@@ -266,7 +266,7 @@ class DriverWalletScreen extends StatelessWidget {
             ),
             SizedBox(height: 1.h),
             Text(
-              'أرباحك وتوريداتك بشكل بسيط',
+              'أرباحك وعمولة التوصيل فقط',
               style: GoogleFonts.cairo(
                 color: textGrey,
                 fontSize: 10.5.sp,
@@ -382,7 +382,7 @@ class DriverWalletScreen extends StatelessWidget {
         Expanded(
           child: _summaryItem(
             icon: Icons.payments_outlined,
-            title: 'إجمالي التحصيل (للمراجعة)',
+            title: 'إجمالي عمولة Bringo',
             value: '${collected.toStringAsFixed(0)} ج',
           ),
         ),
