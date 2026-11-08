@@ -62,13 +62,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
     return '';
   }
 
-  Future<bool> _canReceiveOrders() async {
+  double _orderDeliveryFee(Map<String, dynamic> order) =>
+      double.tryParse('${order['deliveryFee'] ?? 0}') ?? 0;
+
+  Future<bool> _canReceiveOrders(Map<String, dynamic> order) async {
     final snapshot = await FirebaseDatabase.instance.ref('drivers/$driverId').get();
     if (!snapshot.exists || snapshot.value is! Map) return false;
     final driver = Map<dynamic, dynamic>.from(snapshot.value as Map);
     final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
     return driver['isActive'] != false &&
-        driver['receivingOrdersEnabled'] == true && balance >= 100;
+        driver['receivingOrdersEnabled'] == true &&
+        balance + 0.001 >= (_orderDeliveryFee(order) / 3);
   }
 
   Future<void> acceptOrder(Map<String, dynamic> order) async {
@@ -81,8 +85,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
         acceptingOrderId = key;
       });
 
-      if (!await _canReceiveOrders()) {
-        _msg('لا يمكنك استقبال الطلبات إلا بعد شحن المحفظة وتفعيل الحساب من الإدارة (الحد الأدنى 100 جنيه)');
+      if (!await _canReceiveOrders(order)) {
+        _msg('لا يمكن قبول الطلب: الحساب غير مفعل أو الرصيد لا يغطي عمولة Bringo لهذا الطلب.');
         return;
       }
       final orderRef = FirebaseDatabase.instance.ref('orders/$key');
@@ -219,7 +223,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
               final driver = driverData is Map ? Map<dynamic, dynamic>.from(driverData) : <dynamic, dynamic>{};
               final balance = double.tryParse('${driver['walletBalance'] ?? 0}') ?? 0;
               final canReceive = driverSnapshot.hasData && driver['isActive'] != false &&
-                  driver['receivingOrdersEnabled'] == true && balance >= 100;
+                  driver['receivingOrdersEnabled'] == true;
               return StreamBuilder<DatabaseEvent>(
             stream: FirebaseDatabase.instance.ref('orders').onValue,
             builder: (context, snapshot) {
@@ -328,7 +332,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                                     ? 'تعذر التحقق من حالة الحساب. حاول مرة أخرى.'
                                     : driver['receivingOrdersEnabled'] != true || driver['isActive'] == false
                                       ? 'تم إيقاف استقبال الطلبات من الإدارة.'
-                                      : 'رصيد المحفظة أقل من الحد الأدنى 100 جنيه.',
+                                      : 'تعذر استقبال الطلبات. راجع تفعيل الحساب من الإدارة.',
                                     style: GoogleFonts.cairo(fontSize: 11.sp, color: const Color(0xFF8A4037))),
                                 ],
                               ),
