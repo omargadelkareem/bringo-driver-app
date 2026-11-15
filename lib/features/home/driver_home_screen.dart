@@ -197,6 +197,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                 ]).toLowerCase();
                 return status != 'completed' &&
                     status != 'delivered' &&
+                    status != 'rejected' &&
                     status != 'cancelled' &&
                     status != 'canceled';
               }).toList();
