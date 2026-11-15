@@ -21,6 +21,12 @@ class OrderNotificationListener {
 
   /// الحالات التي تعني أن الطلب أصبح جاهزًا للطيار.
   static const Set<String> _readyStatuses = {
+    'pending',
+    'new',
+    'confirmed',
+    'preparing',
+    'accepted',
+    'assigned',
     'ready',
     'ready_for_pickup',
     'readyforpickup',
@@ -135,7 +141,10 @@ class OrderNotificationListener {
 
     final driverId = order['driverId']?.toString().trim() ?? '';
 
-    if (driverId.isNotEmpty) {
+    final driverKey = order['driverKey']?.toString().trim() ?? '';
+    if (driverId.isNotEmpty || driverKey.isNotEmpty ||
+        order['storeStatus'] == 'rejected' ||
+        order['status'] == 'cancelled' || order['status'] == 'rejected') {
       return false;
     }
 
