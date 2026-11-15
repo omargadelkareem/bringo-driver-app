@@ -80,58 +80,40 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
 
   Future<void> acceptOrder(Map<String, dynamic> order) async {
     final key = order['firebaseKey']?.toString() ?? '';
-    if (key.isEmpty || loadingOrderId != null) return;
-
+    if (key.isEmpty || loadingOrderId != null || driverId.isEmpty) return;
+    setState(() => loadingOrderId = key);
     try {
-      setState(() => loadingOrderId = key);
-
-      final orderRef = FirebaseDatabase.instance.ref('orders/$key');
-      final snapshot = await orderRef.get();
-
-      if (!snapshot.exists || snapshot.value == null) {
-        _msg('الطلب لم يعد موجودًا');
-        return;
-      }
-
-      final fresh = Map<String, dynamic>.from(snapshot.value as Map);
-      final currentDriverId = fresh['driverId']?.toString() ?? '';
-      final currentDriverKey = fresh['driverKey']?.toString() ?? '';
-      final currentStatus =
-          (fresh['status'] ?? fresh['orderStatus'] ?? 'pending').toString();
-
-      if (currentDriverId.isNotEmpty || currentDriverKey.isNotEmpty) {
-        _msg('تم قبول الطلب بواسطة طيار آخر');
-        return;
-      }
-
-      const allowed = {'pending', 'confirmed', 'new', 'accepted'};
-      if (!allowed.contains(currentStatus)) {
-        _msg('هذا الطلب غير متاح الآن');
-        return;
-      }
-
-      final now = DateTime.now().millisecondsSinceEpoch;
-      await orderRef.update({
-        'driverId': driverId,
-        'driverKey': driverId,
-        'driverName': driverName,
-        'driverPhone': driverPhone,
-        'status': 'assigned',
-        'orderStatus': 'assigned',
-        'acceptedAt': now,
-        'updatedAt': now,
-      });
-
-      _msg('تم قبول الطلب');
-      tabController.animateTo(1);
-    } catch (_) {
-      _msg('حدث خطأ أثناء قبول الطلب');
-    } finally {
-      if (mounted) setState(() => loadingOrderId = null);
-    }
+      final result = await FirebaseDatabase.instance.ref('orders/$key')
+          .runTransaction((value) {
+        if (value is! Map) return Transaction.abort();
+        final fresh = Map<String, dynamic>.from(value);
+        final status = (fresh['status'] ?? fresh['orderStatus'] ?? 'pending').toString().toLowerCase();
+        if ((fresh['driverId']?.toString().trim().isNotEmpty ?? false) ||
+            (fresh['driverKey']?.toString().trim().isNotEmpty ?? false) ||
+            fresh['storeStatus'] == 'rejected' ||
+            const {'rejected','cancelled','completed','pickedup','ondelivery'}.contains(status)) {
+          return Transaction.abort();
+        }
+        final t = DateTime.now().millisecondsSinceEpoch;
+        final merchantConfirmed = fresh['storeStatus'] == 'preparing' ||
+            fresh['storeStatus'] == 'ready' ||
+            const {'preparing','ready','confirmed','accepted'}.contains(status);
+        final nextStatus = merchantConfirmed ? 'assigned' : status;
+        return Transaction.success({
+          ...fresh, 'driverId':driverId, 'driverKey':driverId,
+          'driverName':driverName, 'driverPhone':driverPhone,
+          'driverDispatchStatus':'assigned',
+          'status':nextStatus, 'orderStatus':nextStatus,
+          'assignedAt':t, 'updatedAt':t,
+        });
+      }, applyLocally:false);
+      _msg(result.committed ? 'تم حجز المشوار' : 'الطلب لم يعد متاحًا أو قبله طيار آخر');
+      if (result.committed) tabController.animateTo(1);
+    } catch (_) { _msg('حدث خطأ أثناء قبول الطلب'); }
+    finally { if (mounted) setState(() => loadingOrderId = null); }
   }
 
-  Future<void> updateStatus(
+    Future<void> updateStatus(
     Map<String, dynamic> order,
     String status,
   ) async {
@@ -201,6 +183,7 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
 
     return dId.isEmpty &&
         dKey.isEmpty &&
+        order['storeStatus'] != 'rejected' &&
         const {'pending', 'confirmed', 'new', 'accepted'}.contains(status);
   }
 
