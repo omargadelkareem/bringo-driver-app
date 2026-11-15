@@ -64,86 +64,39 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
 
   Future<void> acceptOrder(Map<String, dynamic> order) async {
     final key = order['firebaseKey']?.toString() ?? '';
-    if (key.isEmpty || accepting) return;
-
+    if (key.isEmpty || accepting || driverId.isEmpty || !isAvailable) return;
+    setState(() { accepting = true; acceptingOrderId = key; });
     try {
-      setState(() {
-        accepting = true;
-        acceptingOrderId = key;
-      });
-
-      final orderRef = FirebaseDatabase.instance.ref('orders/$key');
-      final freshSnapshot = await orderRef.get();
-
-      if (!freshSnapshot.exists || freshSnapshot.value == null) {
-        _msg('الطلب لم يعد موجودًا');
-        return;
-      }
-
-      final freshOrder =
-          Map<String, dynamic>.from(freshSnapshot.value as Map);
-
-      final currentDriverId =
-          freshOrder['driverId']?.toString().trim() ?? '';
-
-      final currentStatus =
-          freshOrder['status']?.toString() ??
-          freshOrder['orderStatus']?.toString() ??
-          'pending';
-
-      if (currentDriverId.isNotEmpty) {
-        _msg('تم قبول الطلب بواسطة طيار آخر');
-        return;
-      }
-
-      final normalizedStatus = currentStatus.trim().toLowerCase();
-      const allowedStatuses = {
-        'pending',
-        'new',
-        'confirmed',
-        'accepted',
-        'approved',
-        'preparing',
-        'ready',
-        'ready_for_pickup',
-        'readyforpickup',
-      };
-
-      if (!allowedStatuses.contains(normalizedStatus)) {
-        _msg('هذا الطلب غير متاح الآن');
-        return;
-      }
-
-      final now = DateTime.now().millisecondsSinceEpoch;
-      await orderRef.update({
-        'driverId': driverId,
-        'driverName': driverName,
-        'driverPhone': driverPhone,
-
-        // المشروع الحالي يعتمد status، ونكتب orderStatus أيضًا
-        // للتوافق مع أي شاشة قديمة ما زالت تقرأه.
-        'status': 'assigned',
-        'orderStatus': 'assigned',
-
-        'assignedAt': now,
-        'acceptedAt': now,
-        'updatedAt': now,
-      });
-
-      _msg('تم قبول الطلب.. جاهز للمشوار 🚀');
-    } catch (_) {
-      _msg('حدث خطأ أثناء قبول الطلب');
-    } finally {
-      if (mounted) {
-        setState(() {
-          accepting = false;
-          acceptingOrderId = null;
+      final result = await FirebaseDatabase.instance.ref('orders/$key')
+          .runTransaction((value) {
+        if (value is! Map) return Transaction.abort();
+        final fresh = Map<String, dynamic>.from(value);
+        final status = (fresh['status'] ?? fresh['orderStatus'] ?? 'pending').toString().toLowerCase();
+        if ((fresh['driverId']?.toString().trim().isNotEmpty ?? false) ||
+            (fresh['driverKey']?.toString().trim().isNotEmpty ?? false) ||
+            fresh['storeStatus'] == 'rejected' ||
+            const {'rejected','cancelled','completed','pickedup','ondelivery'}.contains(status)) {
+          return Transaction.abort();
+        }
+        final t = DateTime.now().millisecondsSinceEpoch;
+        final merchantConfirmed = fresh['storeStatus'] == 'preparing' ||
+            fresh['storeStatus'] == 'ready' ||
+            const {'preparing','ready','confirmed','accepted'}.contains(status);
+        final nextStatus = merchantConfirmed ? 'assigned' : status;
+        return Transaction.success({
+          ...fresh, 'driverId':driverId, 'driverKey':driverId,
+          'driverName':driverName, 'driverPhone':driverPhone,
+          'driverDispatchStatus':'assigned',
+          'status':nextStatus, 'orderStatus':nextStatus,
+          'assignedAt':t, 'updatedAt':t,
         });
-      }
-    }
+      }, applyLocally:false);
+      _msg(result.committed ? 'تم حجز المشوار ليك بنجاح' : 'الطلب لم يعد متاحًا أو قبله طيار آخر');
+    } catch (_) { _msg('حدث خطأ أثناء قبول الطلب'); }
+    finally { if (mounted) setState(() { accepting=false; acceptingOrderId=null; }); }
   }
 
-  Future<void> rejectOrder(Map<String, dynamic> order) async {
+    Future<void> rejectOrder(Map<String, dynamic> order) async {
     _msg('تم تجاهل الطلب');
   }
 
@@ -221,6 +174,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen>
                     order['driverId']?.toString().trim() ?? '';
 
                 return assignedDriverId.isEmpty &&
+                    order['storeStatus'] != 'rejected' &&
                     _isAvailableForDriver(status);
               }).toList();
 
