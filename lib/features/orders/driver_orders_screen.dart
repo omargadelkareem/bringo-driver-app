@@ -122,6 +122,17 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
 
     try {
       setState(() => loadingOrderId = key);
+      final current = await FirebaseDatabase.instance.ref('orders/$key').get();
+      if (!current.exists || current.value is! Map) { _msg('الطلب غير متاح'); return; }
+      final fresh = Map<String, dynamic>.from(current.value as Map);
+      if (fresh['storeStatus'] == 'rejected' ||
+          fresh['status'] == 'rejected' || fresh['status'] == 'cancelled') {
+        _msg('الطلب تم إلغاؤه'); return;
+      }
+      if (status == 'pickedUp' &&
+          fresh['storeStatus'] != 'ready' && fresh['readyAt'] == null) {
+        _msg('استنى المتجر يؤكد جاهزية الطلب'); return;
+      }
       final now = DateTime.now().millisecondsSinceEpoch;
 
       final updates = <String, dynamic>{
@@ -192,6 +203,8 @@ class _DriverOrdersScreenState extends State<DriverOrdersScreen>
     return _belongsToMe(order) &&
         const {
           'assigned',
+          'pending',
+          'preparing',
           'pickedUp',
           'onDelivery',
           'picked',
