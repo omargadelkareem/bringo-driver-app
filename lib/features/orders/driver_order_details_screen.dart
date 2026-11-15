@@ -151,6 +151,24 @@ class _DriverOrderDetailsScreenState extends State<DriverOrderDetailsScreen> {
         'updatedAt': now,
       };
 
+      // Never let a rider collect an order before the merchant confirms readiness.
+      final freshSnapshot = await FirebaseDatabase.instance.ref('orders/$orderKey').get();
+      if (!freshSnapshot.exists || freshSnapshot.value is! Map) {
+        if (mounted) _message('الطلب لم يعد متاحًا');
+        return;
+      }
+      final fresh = Map<String, dynamic>.from(freshSnapshot.value as Map);
+      if (fresh['storeStatus'] == 'rejected' ||
+          fresh['status'] == 'rejected' || fresh['status'] == 'cancelled') {
+        if (mounted) _message('المتجر ألغى الطلب');
+        return;
+      }
+      if (status == 'pickedUp' &&
+          fresh['storeStatus'] != 'ready' &&
+          fresh['readyAt'] == null) {
+        if (mounted) _message('المتجر لسه بيجهز الطلب. استنى تأكيد الجاهزية');
+        return;
+      }
       if (status == 'pickedUp') updates['pickedUpAt'] = now;
       if (status == 'onDelivery') updates['onDeliveryAt'] = now;
       if (status == 'completed') updates['completedAt'] = now;
